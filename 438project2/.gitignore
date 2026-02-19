@@ -1,127 +1,37 @@
-##################################################
-# General Build Outputs
-##################################################
-
+HELP.md
+.gradle
 build/
-target/
-out/
-logs/
-*.log
-*.tmp
-*.swp
-*.swo
-*.bak
-*.orig
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-##################################################
-# Gradle
-##################################################
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
 
-.gradle/
-gradle-app.setting
-!gradle-wrapper.jar
-
-##################################################
-# Maven
-##################################################
-
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-
-##################################################
-# IntelliJ / JetBrains
-##################################################
-
-.idea/
+### IntelliJ IDEA ###
+.idea
+*.iws
 *.iml
 *.ipr
-*.iws
-*.jks
-*.hprof
-captures/
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# JetBrains local config
-workspace.xml
-tasks.xml
-usage.statistics.xml
-dictionaries/
-shelf/
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
 
-##################################################
-# Linux
-##################################################
-
-*~
-.nfs*
-
-##################################################
-# macOS
-##################################################
-
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-
-##################################################
-# Windows
-##################################################
-
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-
-##################################################
-# VS Code
-##################################################
-
+### VS Code ###
 .vscode/
-.history/
-
-##################################################
-# Node (if someone adds frontend later)
-##################################################
-
-node_modules/
-dist/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-##################################################
-# Docker
-##################################################
-
-docker-compose.override.yml
-.env
-.env.*
-*.env
-
-##################################################
-# Database files (just in case)
-##################################################
-
-*.db
-*.sqlite
-*.sqlite3
-
-##################################################
-# Test Reports
-##################################################
-
-/reports/
-/test-output/
-
-##################################################
-# Misc
-##################################################
-
-coverage/
