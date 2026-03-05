@@ -20,9 +20,11 @@ public class SecurityConfig {
                 .csrf(Customizer.withDefaults())
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/css/**", "/js/**", "/images/**").permitAll()
-                        // You can also permit job search if you want it public:
-                        // .requestMatchers("/jobs/search").permitAll()
+                        .requestMatchers(
+                                "/login",
+                                "/css/**", "/js/**", "/images/**",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
 
