@@ -28,6 +28,15 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+  @Bean
+  UserDetailsService users(PasswordEncoder encoder) {
+    UserDetails user = User.withUsername("test@example.com")
+        .password(encoder.encode("password123"))
+        .roles("USER")
+        .build();
+    return new InMemoryUserDetailsManager(user);
+  }
+}
                 // Enables JWT validation (uses jwk-set-uri from application.properties)
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
