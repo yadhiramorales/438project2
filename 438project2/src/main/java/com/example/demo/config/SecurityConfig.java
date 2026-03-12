@@ -18,12 +18,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // disable CSRF since we are using API
-                // (JWT in Authorization header isn't vulnerable the same way as cookies)
-                .csrf(csrf -> csrf.disable())
-
                 .authorizeHttpRequests(auth -> auth
                         // public endpoints
                         .requestMatchers(
@@ -41,9 +37,18 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // Enables JWT validation (uses jwk-set-uri from application.properties)
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        // Issue: defaultSuccessUrl was pointing to "/notes" (not a UI page).
+                        // Better UX: go back to landing page after login.
+                        .defaultSuccessUrl("/", true)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutSuccessUrl("/")
+                        .permitAll()
+                )
+                .csrf(Customizer.withDefaults());
 
         return http.build();
     }
