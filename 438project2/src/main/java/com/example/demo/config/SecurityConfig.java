@@ -26,8 +26,8 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         // public endpoints
-                        .requestMatchers("/", "/login", "/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
-                        .anyRequest().authenticated()
+                    .requestMatchers("/", "/greeting", "/hello", "/jobs", "/users", "/login", "/css/**", "/js/**", "/images/**").permitAll()
+                    .anyRequest().authenticated()
                 )
 
                 // Enables JWT validation (uses jwk-set-uri from application.properties)
