@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Auth Callback</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<p>Signing you in...</p>
+
+<script>
+    const SUPABASE_URL = "https://yoazzajeriqpcvolofyu.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_Pat5ZFK64TZGg1OW4HBphg_SZbIjDVn";
+
+    const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    (async () => {
+        const { data, error } = await sbClient.auth.getSession();
+
+        if (error) {
+            document.body.innerHTML = "<p>Error: " + error.message + "</p>";
+            return;
+        }
+
+        const token = data?.session?.access_token;
+
+        if (!token) {
+            document.body.innerHTML = "<p>No token found. Try logging in again.</p>";
+            return;
+        }
+
+        localStorage.setItem("sb_access_token", token);
+
+        document.body.innerHTML = "<p>Login successful. Redirecting...</p>";
+
+        window.location.href = "/";
+    })();
+</script>
+</body>
+</html>

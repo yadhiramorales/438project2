@@ -21,16 +21,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // Public pages
-                        .requestMatchers("/", "/login", "/error").permitAll()
-
-                        // Static assets
-                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-
-                        // Swagger and OpenAPI docs should be reachable without logging in
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-
-                        // Everything else requires authentication
+                        // public endpoints
+                        .requestMatchers(
+                                "/",
+                                "/greeting",
+                                "/hello",
+                                "/jobs",
+                                "/users",
+                                "/login",
+                                "/auth/callback",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
