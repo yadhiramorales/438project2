@@ -10,6 +10,7 @@
 
 package com.example.demo.controller;
 
+import com.example.demo.repository.JobApplicationRepository;
 import com.example.demo.entity.JobApplication;
 import com.example.demo.repository.JobApplicationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
