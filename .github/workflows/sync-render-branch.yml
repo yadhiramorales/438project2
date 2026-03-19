@@ -1,4 +1,4 @@
-name: Sync main to render branch
+name: Syncs main to render branch
 
 on:
   push:
@@ -23,6 +23,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Force-update render branch from main
+      - name: Force-updates render branch from main
         run: |
           git push origin HEAD:render-prod --force
