@@ -6,8 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -17,8 +23,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // Tests the NotesController endpoints without spinning up a full server
 @WebMvcTest(NotesController.class)
-@WithMockUser // pretend a logged-in user exists so Spring Security doesn't block everything with 401
+@ContextConfiguration(classes = {NotesController.class, NotesControllerTest.TestSecurityConfig.class})
+@WithMockUser // pretend a logged-in user exists
 public class NotesControllerTest {
+
+    // replaces the real SecurityConfig during tests — disables JWT so @WithMockUser works
+    @Configuration
+    static class TestSecurityConfig {
+        @Bean
+        SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
+            http
+                    .csrf(AbstractHttpConfigurer::disable) // disable CSRF for tests
+                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()); // allow everything
+            return http.build();
+        }
+    }
 
     // fake browser that lets us send HTTP requests in tests
     @Autowired
