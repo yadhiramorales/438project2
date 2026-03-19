@@ -1,18 +1,494 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-  <title>JobTracker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JobTracker – Find the job that's right for you</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --indeed-blue: #2557a7;
+      --indeed-blue-dark: #1a3f7c;
+      --indeed-blue-light: #e8f0fc;
+      --indeed-purple: #6e3fa3;
+      --text: #1a1a1a;
+      --muted: #595959;
+      --border: #d4d2d0;
+      --bg: #f3f2f1;
+      --white: #ffffff;
+      --tag-bg: #f0f0f0;
+      --green: #1a7f5a;
+      --red: #b91c1c;
+      --orange: #c2550a;
+    }
+
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--indeed-blue);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--indeed-purple); }
+    .nav-right { display: flex; align-items: center; gap: 1.25rem; }
+    .nav-link {
+      color: var(--indeed-blue);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.4rem 0.5rem;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .nav-link:hover { background: var(--indeed-blue-light); }
+    .nav-signin {
+      background: var(--indeed-blue);
+      color: var(--white);
+      padding: 0.45rem 1.1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .nav-signin:hover { background: var(--indeed-blue-dark); }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--indeed-blue);
+      padding: 3.5rem 2rem 4rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(1.75rem, 4vw, 2.6rem);
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+    }
+    .hero p { color: rgba(255,255,255,0.8); font-size: 1rem; margin-bottom: 2rem; }
+
+    .search-box {
+      background: var(--white);
+      border-radius: 8px;
+      display: flex;
+      max-width: 780px;
+      margin: 0 auto;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .search-field {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 0.6rem;
+      border-right: 1px solid var(--border);
+    }
+    .search-icon { font-size: 1.1rem; color: var(--muted); flex-shrink: 0; }
+    .search-field input {
+      border: none;
+      outline: none;
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 0.95rem;
+      width: 100%;
+      padding: 1rem 0;
+      color: var(--text);
+    }
+    .search-field input::placeholder { color: #9e9e9e; }
+    .search-btn {
+      background: var(--indeed-blue);
+      color: var(--white);
+      border: none;
+      padding: 0 2rem;
+      font-family: 'Noto Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    .search-btn:hover { background: var(--indeed-blue-dark); }
+
+    .popular {
+      margin-top: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .popular span { color: rgba(255,255,255,0.7); font-size: 0.82rem; }
+    .popular a { color: var(--white); font-size: 0.82rem; text-decoration: underline; text-underline-offset: 2px; opacity: 0.85; }
+    .popular a:hover { opacity: 1; }
+
+    /* ── MAIN ── */
+    .main-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .section-count { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── JOB CARDS ── */
+    .job-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .job-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      display: block;
+    }
+    .job-card:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      border-color: var(--indeed-blue);
+    }
+    .job-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .job-title { font-size: 1rem; font-weight: 600; color: var(--indeed-blue); margin-bottom: 0.2rem; }
+    .job-company { font-size: 0.875rem; color: var(--text); margin-bottom: 0.15rem; }
+    .job-location { font-size: 0.82rem; color: var(--muted); }
+    .job-logo {
+      width: 48px; height: 48px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+    .job-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.85rem; }
+    .tag {
+      font-size: 0.78rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 100px;
+      background: var(--tag-bg);
+      color: var(--muted);
+    }
+    .tag.status-applied  { background: #e8f0fc; color: var(--indeed-blue); }
+    .tag.status-interview { background: #fef3cd; color: #92610a; }
+    .tag.status-offer    { background: #e6f4ee; color: var(--green); }
+    .tag.status-rejected { background: #fdecea; color: var(--red); }
+
+    .job-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--bg);
+    }
+    .job-posted { font-size: 0.78rem; color: var(--muted); }
+
+    /* loading / empty / error states */
+    .state-box {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--muted);
+    }
+    .state-box .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .state-box p { font-size: 0.9rem; }
+    .state-box a { color: var(--indeed-blue); }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--indeed-blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── SIDEBAR ── */
+    .sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+    .sidebar-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+    .sidebar-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; }
+    .cta-primary {
+      display: block;
+      background: var(--indeed-blue);
+      color: var(--white);
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: background 0.15s;
+      margin-bottom: 0.6rem;
+    }
+    .cta-primary:hover { background: var(--indeed-blue-dark); }
+    .cta-secondary {
+      display: block;
+      background: var(--white);
+      color: var(--indeed-blue);
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      border: 1px solid var(--indeed-blue);
+      transition: background 0.15s;
+    }
+    .cta-secondary:hover { background: var(--indeed-blue-light); }
+    .quick-links { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .quick-links a { color: var(--indeed-blue); text-decoration: none; font-size: 0.875rem; }
+    .quick-links a:hover { text-decoration: underline; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+    .footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    footer a { color: var(--indeed-blue); text-decoration: none; font-size: 0.8rem; }
+    footer a:hover { text-decoration: underline; }
+    footer p { font-size: 0.8rem; color: var(--muted); }
+
+    @media (max-width: 768px) {
+      .main-content { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .search-box { flex-direction: column; }
+      .search-field { border-right: none; border-bottom: 1px solid var(--border); }
+      .search-btn { padding: 1rem; justify-content: center; }
+    }
+  </style>
 </head>
 <body>
-<h1>JobTracker</h1>
-<p>Search jobs and manage notes in one place.</p>
 
-<a href="/jobs/search">
-  <button>Search Jobs</button>
-</a>
+<nav>
+  <a class="logo" href="/">Job<span>Tracker</span></a>
+  <div class="nav-right">
+    <a class="nav-link" href="/jobs/search">Find Jobs</a>
+    <a class="nav-link" href="/notes">My Notes</a>
+    <a class="nav-signin" href="/login">Sign in</a>
+  </div>
+</nav>
 
-<a href="/notes">
-  <button>View Notes</button>
-</a>
+<div class="hero">
+  <h1>Find the job that's right for you</h1>
+  <p>Search listings and track every application in one place</p>
+  <div class="search-box">
+    <div class="search-field">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Job title, keywords, or company" id="jobInput" />
+    </div>
+    <div class="search-field">
+      <span class="search-icon">📍</span>
+      <input type="text" placeholder="City, state, or remote" id="locationInput" />
+    </div>
+    <a class="search-btn" href="/jobs/search">Find jobs</a>
+  </div>
+  <div class="popular">
+    <span>Popular:</span>
+    <a href="/jobs/search?q=software+engineer">Software Engineer</a>
+    <a href="/jobs/search?q=data+analyst">Data Analyst</a>
+    <a href="/jobs/search?q=product+manager">Product Manager</a>
+    <a href="/jobs/search?q=remote">Remote</a>
+  </div>
+</div>
+
+<div class="main-content">
+
+  <!-- JOB LIST — populated by JS from GET /jobs -->
+  <div>
+    <div class="section-header">
+      <span class="section-title">Your saved applications</span>
+      <span class="section-count" id="jobCount"></span>
+    </div>
+    <div class="job-list" id="jobList">
+      <!-- loading spinner shown by default -->
+      <div class="state-box" id="loadingState">
+        <div class="spinner"></div>
+        <p>Loading your applications...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <h3>Manage your job search</h3>
+      <a class="cta-primary" href="/login">Sign in with Google</a>
+      <a class="cta-secondary" href="/notes">View saved notes</a>
+    </div>
+    <div class="sidebar-card">
+      <h3>Quick links</h3>
+      <ul class="quick-links">
+        <li><a href="/jobs/search">🔍 Search all jobs</a></li>
+        <li><a href="/notes">📝 My notes</a></li>
+        <li><a href="/jobs">📋 All applications</a></li>
+        <li><a href="/login">🔐 Sign in</a></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="/jobs/search">Find Jobs</a>
+    <a href="/notes">My Notes</a>
+    <a href="/login">Sign In</a>
+  </div>
+  <p>© 2026 JobTracker · CST 438 Project 02 · Built with Spring Boot, Supabase & Docker</p>
+</footer>
+
+<script>
+  // status badge helper — maps your Status enum to a styled tag
+  function statusTag(status) {
+    if (!status) return '';
+    const map = {
+      APPLIED:   { cls: 'status-applied',   label: '📋 Applied' },
+      INTERVIEW: { cls: 'status-interview',  label: '🗓 Interview' },
+      OFFER:     { cls: 'status-offer',      label: '🎉 Offer' },
+      REJECTED:  { cls: 'status-rejected',   label: '✗ Rejected' },
+    };
+    const s = map[status] || { cls: '', label: status };
+    return `<span class="tag ${s.cls}">${s.label}</span>`;
+  }
+
+  // how long ago was createdAt?
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 7)  return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+  }
+
+  // build a single job card from a JobApplication object
+  function buildCard(job) {
+    const card = document.createElement('div');
+    card.className = 'job-card';
+    card.innerHTML = `
+        <div class="job-card-top">
+          <div>
+            <div class="job-title">${job.jobTitle || 'Untitled Position'}</div>
+            <div class="job-company">${job.company || 'Unknown Company'}</div>
+            <div class="job-location">📍 ${job.location || 'Location not specified'}</div>
+          </div>
+          <div class="job-logo">🏢</div>
+        </div>
+        <div class="job-tags">
+          ${statusTag(job.status)}
+        </div>
+        <div class="job-footer">
+          <span class="job-posted">${timeAgo(job.createdAt)}</span>
+        </div>
+      `;
+    return card;
+  }
+
+  // fetch real data from GET /jobs
+  async function loadJobs() {
+    const list     = document.getElementById('jobList');
+    const loading  = document.getElementById('loadingState');
+    const countEl  = document.getElementById('jobCount');
+
+    try {
+      const token = localStorage.getItem('sb_access_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const res = await fetch('/jobs', { headers });
+
+      if (!res.ok) {
+        // not logged in or error
+        loading.innerHTML = `
+            <div class="icon">🔐</div>
+            <p>Please <a href="/login">sign in</a> to see your saved applications.</p>
+          `;
+        return;
+      }
+
+      const jobs = await res.json();
+
+      // clear loading spinner
+      list.removeChild(loading);
+
+      if (jobs.length === 0) {
+        list.innerHTML = `
+            <div class="state-box">
+              <div class="icon">📭</div>
+              <p>No saved applications yet. <a href="/jobs/search">Search for jobs</a> to get started!</p>
+            </div>
+          `;
+        countEl.textContent = '0 applications';
+        return;
+      }
+
+      countEl.textContent = `${jobs.length} application${jobs.length !== 1 ? 's' : ''}`;
+      jobs.forEach(job => list.appendChild(buildCard(job)));
+
+    } catch (err) {
+      loading.innerHTML = `
+          <div class="icon">⚠️</div>
+          <p>Could not load jobs. Make sure the API is running.</p>
+        `;
+    }
+  }
+
+  // run on page load
+  loadJobs();
+</script>
+
 </body>
 </html>

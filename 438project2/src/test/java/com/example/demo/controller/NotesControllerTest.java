@@ -5,10 +5,18 @@ import com.example.demo.dto.NoteUpdateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.config.TestSecurityConfig;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
 
 import java.util.UUID;
 
@@ -17,8 +25,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // Tests the NotesController endpoints without spinning up a full server
 @WebMvcTest(NotesController.class)
-@WithMockUser // pretend a logged-in user exists so Spring Security doesn't block everything with 401
+@ContextConfiguration(classes = {NotesController.class, NotesControllerTest.TestSecurityConfig.class})
+@WithMockUser // pretend a logged-in user exists
 public class NotesControllerTest {
+
+    // replaces the real SecurityConfig during tests — disables JWT so @WithMockUser works
+    @Configuration
+    static class TestSecurityConfig {
+        @Bean
+        SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
+            http
+                    .csrf(AbstractHttpConfigurer::disable) // disable CSRF for tests
+                    .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()); // allow everything
+            return http.build();
+        }
+    }
 
     // fake browser that lets us send HTTP requests in tests
     @Autowired
@@ -51,7 +72,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(post("/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.jobTitle").value("Software Engineer"))
@@ -76,7 +98,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(post("/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(badRequest))
+                        .content(badRequest)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -95,7 +118,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(post("/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(badRequest))
+                        .content(badRequest)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -105,7 +129,8 @@ public class NotesControllerTest {
     void createNote_withEmptyBody_shouldReturn400() throws Exception {
         mockMvc.perform(post("/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{}")
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -118,7 +143,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(put("/notes/" + noteId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(noteId.toString()))
                 .andExpect(jsonPath("$.noteText").value("Updated note text"));
@@ -137,7 +163,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(put("/notes/" + noteId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(badRequest))
+                        .content(badRequest)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -153,7 +180,8 @@ public class NotesControllerTest {
 
         mockMvc.perform(put("/notes/not-a-real-uuid")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(badRequest))
+                        .content(badRequest)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -163,7 +191,8 @@ public class NotesControllerTest {
     void deleteNote_withValidId_shouldReturn204() throws Exception {
         UUID noteId = UUID.randomUUID();
 
-        mockMvc.perform(delete("/notes/" + noteId))
+        mockMvc.perform(delete("/notes/" + noteId)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -171,7 +200,8 @@ public class NotesControllerTest {
     // DELETE /notes/{id} — garbage UUID in the URL should return 400 before hitting the DB
     @Test
     void deleteNote_withInvalidUUID_shouldReturn400() throws Exception {
-        mockMvc.perform(delete("/notes/not-a-real-uuid"))
+        mockMvc.perform(delete("/notes/not-a-real-uuid")
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isBadRequest());
     }
 }

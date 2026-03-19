@@ -1,43 +1,42 @@
-
-/**
- * JobController
- *
- * @author Paulo Camacho
- * @version 1.0
- * @created 3/4/26 7:15 PM
- * @since 3/4/26
- */
-
 package com.example.demo.controller;
 
+import com.example.demo.dto.JobCreateRequest;
 import com.example.demo.entity.JobApplication;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JobApplicationRepository;
-import java.util.List;
-import java.util.UUID;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.net.URI;
+import java.util.List;
 
 @RestController
 public class JobController {
 
-    private final JobApplicationRepository jobApplicationRepository;
-
-    public JobController(JobApplicationRepository jobApplicationRepository) {
-        this.jobApplicationRepository = jobApplicationRepository;
-    }
+    @Autowired
+    private JobApplicationRepository jobApplicationRepository;
 
     @GetMapping("/jobs")
     public List<JobApplication> getAllJobs() {
         return jobApplicationRepository.findAll();
     }
 
-    @GetMapping("/jobs/{id}")
-    public JobApplication getJobById(@PathVariable UUID id) {
-        return jobApplicationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Job application not found: " + id
-                ));
+    @PostMapping("/jobs")
+    public ResponseEntity<JobApplication> createJob(@Valid @RequestBody JobCreateRequest request) {
+        JobApplication job = new JobApplication();
+        job.setJobTitle(request.jobTitle());
+        job.setCompany(request.company());
+        job.setLocation(request.location());
+        JobApplication.Status status = request.status() != null ? request.status() : JobApplication.Status.APPLIED;
+        job.setStatus(status);
+
+        JobApplication saved = jobApplicationRepository.save(job);
+        URI location = saved.getId() != null ? URI.create("/jobs/" + saved.getId()) : URI.create("/jobs");
+        return ResponseEntity.created(location).body(saved);
     }
 }
