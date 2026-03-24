@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.JobCreateRequest;
 import com.example.demo.entity.JobApplication;
+import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JobApplicationRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
