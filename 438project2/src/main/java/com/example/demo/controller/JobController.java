@@ -6,6 +6,7 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JobApplicationRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,12 +19,12 @@ public class JobController {
     @Autowired
     private JobApplicationRepository jobApplicationRepository;
 
-    @GetMapping("/jobs")
+    @GetMapping(value = "/jobs", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<JobApplication> getAllJobs() {
         return jobApplicationRepository.findAll();
     }
 
-    @GetMapping("/jobs/search")
+    @GetMapping(value = "/jobs/search", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<JobApplication> searchJobs(@RequestParam(required = false, name = "q") String keyword,
                                            @RequestParam(required = false) String location) {
         String kw = normalize(keyword);
@@ -34,7 +35,7 @@ public class JobController {
         return jobApplicationRepository.search(kw, loc);
     }
 
-    @PostMapping("/jobs")
+    @PostMapping(value = "/jobs", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JobApplication> createJob(@Valid @RequestBody JobCreateRequest request) {
         JobApplication job = new JobApplication();
         job.setJobTitle(request.jobTitle());

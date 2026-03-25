@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes – JobTracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f6f7fb; color: #111; }
+    header { background: #1f4b99; color: #fff; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+    header a { color: #fff; text-decoration: none; font-weight: bold; }
+    main { max-width: 960px; margin: 0 auto; padding: 1.5rem; display: grid; gap: 1rem; }
+    .card { background: #fff; border: 1px solid #d8dce6; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    form { display: grid; gap: 0.5rem; }
+    input, textarea, button { padding: 0.65rem; border: 1px solid #ccd3e0; border-radius: 6px; font-size: 0.95rem; }
+    textarea { min-height: 120px; resize: vertical; }
+    button { background: #1f4b99; color: #fff; border: none; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.7; cursor: not-allowed; }
+    .list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .note { border: 1px solid #e3e7f0; border-radius: 6px; padding: 0.85rem; background: #fafbff; }
+    .muted { color: #555; font-size: 0.9rem; }
+    .state { text-align: center; color: #666; padding: 1rem; }
+    .error { color: #b00020; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><a href="/">JobTracker</a></div>
+    <nav style="display:flex; gap:1rem; align-items:center; font-size:0.95rem;">
+      <a href="/jobs" aria-label="Jobs">Jobs</a>
+      <a href="/notes" aria-label="Notes">Notes</a>
+      <a href="/login" aria-label="Login">Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2 style="margin-top:0;">Create a note</h2>
+      <form id="noteForm">
+        <input id="jobId" name="jobId" placeholder="Job ID (UUID)" required />
+        <input id="jobTitle" name="jobTitle" placeholder="Job title" required />
+        <input id="company" name="company" placeholder="Company" required />
+        <textarea id="noteText" name="noteText" placeholder="Write your note" required></textarea>
+        <button type="submit" id="noteBtn">Save note</button>
+        <div id="noteMsg" class="muted"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+        <h2 style="margin:0;">Notes</h2>
+        <span id="noteCount" class="muted"></span>
+      </div>
+      <div id="noteError" class="error"></div>
+      <div id="notes" class="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const notesEl = document.getElementById('notes');
+    const noteCount = document.getElementById('noteCount');
+    const noteError = document.getElementById('noteError');
+
+    function renderNoteList(list) {
+      if (!list || list.length === 0) {
+        noteCount.textContent = '';
+        notesEl.innerHTML = '<div class="state">No notes yet.</div>';
+        return;
+      }
+      noteCount.textContent = `${list.length} note${list.length === 1 ? '' : 's'}`;
+      notesEl.innerHTML = list.map(n => `
+        <div class="note">
+          <strong>${n.jobTitle || 'Untitled role'}</strong>
+          <div class="muted">${n.company || 'Unknown company'}</div>
+          <div style="margin-top:0.35rem; white-space:pre-wrap;">${n.noteText || ''}</div>
+          <div class="muted" style="margin-top:0.35rem;">ID: ${n.id || n.jobId || ''}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadNotes() {
+      noteError.textContent = '';
+      notesEl.innerHTML = '<div class="state">Loading...</div>';
+      try {
+        const res = await fetch('/notes');
+        if (!res.ok) throw new Error('Request failed');
+        const data = await res.json();
+        renderNoteList(data);
+      } catch (err) {
+        noteError.textContent = 'Could not load notes. Please try again.';
+        notesEl.innerHTML = '<div class="state">Error loading notes.</div>';
+      }
+    }
+
+    document.getElementById('noteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('noteMsg');
+      msg.textContent = 'Saving...';
+      noteError.textContent = '';
+      try {
+        const payload = {
+          jobId: document.getElementById('jobId').value.trim(),
+          jobTitle: document.getElementById('jobTitle').value.trim(),
+          company: document.getElementById('company').value.trim(),
+          noteText: document.getElementById('noteText').value.trim()
+        };
+        const res = await fetch('/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Save failed');
+        msg.textContent = 'Saved!';
+        document.getElementById('noteForm').reset();
+        loadNotes();
+      } catch (err) {
+        msg.textContent = 'Could not save note.';
+      }
+    });
+
+    loadNotes();
+  </script>
+</body>
+</html>

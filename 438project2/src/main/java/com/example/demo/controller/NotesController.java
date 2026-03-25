@@ -8,6 +8,7 @@ import com.example.demo.entity.JobNote;
 import com.example.demo.repository.JobApplicationRepository;
 import com.example.demo.repository.JobNoteRepository;
 import jakarta.validation.Valid;
+<<<<<<< HEAD
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+=======
+import org.springframework.http.MediaType;
+>>>>>>> d4b260f (Add HTML views for jobs and notes routes)
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,6 +28,7 @@ import com.example.demo.exception.ResourceNotFoundException;
 @RequestMapping("/notes")
 public class NotesController {
 
+<<<<<<< HEAD
     private final JobNoteRepository jobNoteRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final Map<UUID, NoteResponse> notes = new LinkedHashMap<>();
@@ -38,6 +43,9 @@ public class NotesController {
     }
 
     @GetMapping
+=======
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+>>>>>>> d4b260f (Add HTML views for jobs and notes routes)
     public ResponseEntity<List<NoteResponse>> getAllNotes() {
         List<NoteResponse> notes = jobNoteRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -47,7 +55,7 @@ public class NotesController {
         return ResponseEntity.ok(notes);
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody NoteCreateRequest req) {
         JobApplication jobApplication = jobApplicationRepository.findById(req.jobApplicationId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job application not found"));
@@ -58,7 +66,7 @@ public class NotesController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NoteResponse> updateNote(
             @PathVariable UUID id,
             @Valid @RequestBody NoteUpdateRequest req
@@ -84,8 +92,12 @@ public class NotesController {
         return ResponseEntity.ok(updated);
     }
 
+<<<<<<< HEAD
 
     @DeleteMapping("/{id}")
+=======
+    @DeleteMapping(value = "/{id}")
+>>>>>>> d4b260f (Add HTML views for jobs and notes routes)
     public ResponseEntity<Void> deleteNote(@PathVariable UUID id) {
         NoteResponse removed = notes.remove(id);
 

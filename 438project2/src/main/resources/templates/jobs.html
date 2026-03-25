@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jobs – Search & Saved Applications</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f6f7fb; color: #111; }
+    header { background: #1f4b99; color: #fff; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+    header a { color: #fff; text-decoration: none; font-weight: bold; }
+    main { max-width: 1080px; margin: 0 auto; padding: 1.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; }
+    h1 { margin: 0 0 0.35rem; font-size: 1.5rem; }
+    .card { background: #fff; border: 1px solid #d8dce6; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-weight: bold; }
+    form { display: grid; gap: 0.5rem; }
+    input, select, button { padding: 0.65rem; border: 1px solid #ccd3e0; border-radius: 6px; font-size: 0.95rem; }
+    button { background: #1f4b99; color: #fff; border: none; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: 0.7; cursor: not-allowed; }
+    .list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .job { border: 1px solid #e3e7f0; border-radius: 6px; padding: 0.85rem; background: #fafbff; }
+    .job h3 { margin: 0 0 0.2rem; font-size: 1.05rem; }
+    .muted { color: #555; font-size: 0.9rem; }
+    .status { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.8rem; background: #e6edff; color: #1f4b99; margin-top: 0.35rem; }
+    .state { text-align: center; color: #666; padding: 1rem; }
+    .error { color: #b00020; font-size: 0.9rem; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <a href="/">JobTracker</a>
+    </div>
+    <nav style="display:flex; gap:1rem; align-items:center; font-size:0.95rem;">
+      <a href="/jobs" aria-label="Jobs">Jobs</a>
+      <a href="/notes" aria-label="Notes">Notes</a>
+      <a href="/login" aria-label="Login">Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="section-title"><span>Search jobs</span><span id="count"></span></div>
+      <form id="searchForm">
+        <input id="q" name="q" placeholder="Keyword or company" />
+        <input id="location" name="location" placeholder="Location (optional)" />
+        <button type="submit" id="searchBtn">Search</button>
+      </form>
+      <div id="searchError" class="error"></div>
+      <div id="results" class="list" style="margin-top:0.75rem;"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title"><span>Add a job</span></div>
+      <form id="createForm">
+        <input id="title" name="jobTitle" placeholder="Job title" required />
+        <input id="company" name="company" placeholder="Company" required />
+        <input id="loc" name="location" placeholder="Location" />
+        <select id="status" name="status">
+          <option value="APPLIED">Applied</option>
+          <option value="INTERVIEW">Interview</option>
+          <option value="OFFER">Offer</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+        <button type="submit" id="createBtn">Save job</button>
+        <div id="createMsg" class="muted"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const resultsEl = document.getElementById('results');
+    const countEl = document.getElementById('count');
+    const searchError = document.getElementById('searchError');
+
+    function renderState(text) {
+      resultsEl.innerHTML = `<div class="state">${text}</div>`;
+    }
+
+    function renderJobs(jobs) {
+      if (!jobs || jobs.length === 0) {
+        countEl.textContent = '';
+        renderState('No jobs found yet. Use the form to add or search.');
+        return;
+      }
+      countEl.textContent = `${jobs.length} result${jobs.length === 1 ? '' : 's'}`;
+      resultsEl.innerHTML = jobs.map(j => `
+        <div class="job">
+          <h3>${j.jobTitle || 'Untitled role'}</h3>
+          <div class="muted">${j.company || 'Unknown company'} · ${j.location || 'Location N/A'}</div>
+          <div class="status">${j.status || 'APPLIED'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function fetchJobs(params) {
+      searchError.textContent = '';
+      renderState('Loading...');
+      const qs = params ? `?${params.toString()}` : '';
+      const url = qs ? `/jobs/search${qs}` : '/jobs';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Request failed');
+      return res.json();
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams();
+      const qVal = document.getElementById('q').value.trim();
+      const locVal = document.getElementById('location').value.trim();
+      if (qVal) params.append('q', qVal);
+      if (locVal) params.append('location', locVal);
+      try {
+        const jobs = await fetchJobs(params);
+        renderJobs(jobs);
+      } catch (err) {
+        searchError.textContent = 'Could not load jobs. Please try again.';
+        renderState('Error loading jobs');
+      }
+    });
+
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('createMsg');
+      msg.textContent = 'Saving...';
+      try {
+        const payload = {
+          jobTitle: document.getElementById('title').value.trim(),
+          company: document.getElementById('company').value.trim(),
+          location: document.getElementById('loc').value.trim(),
+          status: document.getElementById('status').value
+        };
+        const res = await fetch('/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Save failed');
+        msg.textContent = 'Saved!';
+        document.getElementById('createForm').reset();
+        // refresh list
+        const jobs = await fetchJobs(new URLSearchParams());
+        renderJobs(jobs);
+      } catch (err) {
+        msg.textContent = 'Could not save job.';
+      }
+    });
+
+    // initial load
+    fetchJobs().then(renderJobs).catch(() => renderState('Could not load jobs.'));
+  </script>
+</body>
+</html>
