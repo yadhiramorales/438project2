@@ -123,7 +123,11 @@
       renderState('Loading...');
       const qs = params ? `?${params.toString()}` : '';
       const url = qs ? `/jobs/search${qs}` : '/jobs';
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
       if (!res.ok) throw new Error('Request failed');
       return res.json();
     }
