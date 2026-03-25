@@ -74,23 +74,48 @@
     const searchError = document.getElementById('searchError');
 
     function renderState(text) {
-      resultsEl.innerHTML = `<div class="state">${text}</div>`;
+      // Clear previous results and render a simple state message safely
+      resultsEl.textContent = '';
+      const stateDiv = document.createElement('div');
+      stateDiv.className = 'state';
+      stateDiv.textContent = text;
+      resultsEl.appendChild(stateDiv);
     }
 
     function renderJobs(jobs) {
+      // Clear previous results
+      resultsEl.textContent = '';
+
       if (!jobs || jobs.length === 0) {
         countEl.textContent = '';
         renderState('No jobs found yet. Use the form to add or search.');
         return;
       }
+
       countEl.textContent = `${jobs.length} result${jobs.length === 1 ? '' : 's'}`;
-      resultsEl.innerHTML = jobs.map(j => `
-        <div class="job">
-          <h3>${j.jobTitle || 'Untitled role'}</h3>
-          <div class="muted">${j.company || 'Unknown company'} · ${j.location || 'Location N/A'}</div>
-          <div class="status">${j.status || 'APPLIED'}</div>
-        </div>
-      `).join('');
+
+      jobs.forEach(j => {
+        const jobDiv = document.createElement('div');
+        jobDiv.className = 'job';
+
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = j.jobTitle || 'Untitled role';
+        jobDiv.appendChild(titleEl);
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'muted';
+        const companyText = j.company || 'Unknown company';
+        const locationText = j.location || 'Location N/A';
+        metaEl.textContent = `${companyText} · ${locationText}`;
+        jobDiv.appendChild(metaEl);
+
+        const statusEl = document.createElement('div');
+        statusEl.className = 'status';
+        statusEl.textContent = j.status || 'APPLIED';
+        jobDiv.appendChild(statusEl);
+
+        resultsEl.appendChild(jobDiv);
+      });
     }
 
     async function fetchJobs(params) {
