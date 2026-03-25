@@ -314,7 +314,7 @@
 <nav>
   <a class="logo" href="/">Job<span>Tracker</span></a>
   <div class="nav-right">
-    <a class="nav-link" href="/jobs/search">Find Jobs</a>
+    <a class="nav-link" href="#" id="navSearch">Find Jobs</a>
     <a class="nav-link" href="/notes">My Notes</a>
     <a class="nav-signin" href="/login">Sign in</a>
   </div>
@@ -332,7 +332,7 @@
       <span class="search-icon">📍</span>
       <input type="text" placeholder="City, state, or remote" id="locationInput" />
     </div>
-    <a class="search-btn" href="/jobs/search">Find jobs</a>
+    <button class="search-btn" id="searchBtn" type="button">Find jobs</button>
   </div>
   <div class="popular">
     <span>Popular:</span>
@@ -376,6 +376,25 @@
         <li><a href="/login">🔐 Sign in</a></li>
       </ul>
     </div>
+
+    <div class="sidebar-card">
+      <h3>Save a job application</h3>
+      <form id="jobForm">
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <input id="formTitle" name="jobTitle" placeholder="Job title" required style="padding:0.55rem;border:1px solid var(--border);border-radius:6px;font:inherit;" />
+          <input id="formCompany" name="company" placeholder="Company" required style="padding:0.55rem;border:1px solid var(--border);border-radius:6px;font:inherit;" />
+          <input id="formLocation" name="location" placeholder="Location" style="padding:0.55rem;border:1px solid var(--border);border-radius:6px;font:inherit;" />
+          <select id="formStatus" name="status" style="padding:0.55rem;border:1px solid var(--border);border-radius:6px;font:inherit;">
+            <option value="APPLIED">Applied</option>
+            <option value="INTERVIEW">Interview</option>
+            <option value="OFFER">Offer</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+          <button type="submit" class="cta-primary" id="saveJobBtn">Save job</button>
+          <small id="formMessage" style="color:var(--muted);"></small>
+        </div>
+      </form>
+    </div>
   </div>
 
 </div>
@@ -403,7 +422,6 @@
     return `<span class="tag ${s.cls}">${s.label}</span>`;
   }
 
-  // how long ago was createdAt?
   function timeAgo(dateStr) {
     if (!dateStr) return '';
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -415,7 +433,6 @@
     return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
   }
 
-  // build a single job card from a JobApplication object
   function buildCard(job) {
     const card = document.createElement('div');
     card.className = 'job-card';
@@ -438,55 +455,106 @@
     return card;
   }
 
-  // fetch real data from GET /jobs
-  async function loadJobs() {
-    const list     = document.getElementById('jobList');
-    const loading  = document.getElementById('loadingState');
-    const countEl  = document.getElementById('jobCount');
+  const jobList   = document.getElementById('jobList');
+  const countEl   = document.getElementById('jobCount');
+  const formMsg   = document.getElementById('formMessage');
 
+  function renderState(icon, text) {
+    jobList.innerHTML = `
+      <div class="state-box">
+        <div class="icon">${icon}</div>
+        <p>${text}</p>
+      </div>
+    `;
+  }
+
+  function renderJobs(jobs) {
+    if (!jobs || jobs.length === 0) {
+      countEl.textContent = '0 applications';
+      renderState('📭', 'No saved applications yet. Use the form to add one.');
+      return;
+    }
+
+    countEl.textContent = `${jobs.length} application${jobs.length !== 1 ? 's' : ''}`;
+    jobList.innerHTML = '';
+    jobs.forEach(job => jobList.appendChild(buildCard(job)));
+  }
+
+  function authHeaders() {
+    const token = localStorage.getItem('sb_access_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
+
+  async function loadJobs(keyword, location) {
+    renderState('<div class="spinner"></div>', 'Loading your applications...');
     try {
-      const token = localStorage.getItem('sb_access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const params = new URLSearchParams();
+      if (keyword) params.append('q', keyword);
+      if (location) params.append('location', location);
+      const url = params.toString() ? `/jobs/search?${params.toString()}` : '/jobs';
 
-      const res = await fetch('/jobs', { headers });
+      const res = await fetch(url, { headers: authHeaders() });
 
       if (!res.ok) {
-        // not logged in or error
-        loading.innerHTML = `
-            <div class="icon">🔐</div>
-            <p>Please <a href="/login">sign in</a> to see your saved applications.</p>
-          `;
+        renderState('🔐', 'Please sign in to see your saved applications.');
         return;
       }
 
       const jobs = await res.json();
-
-      // clear loading spinner
-      list.removeChild(loading);
-
-      if (jobs.length === 0) {
-        list.innerHTML = `
-            <div class="state-box">
-              <div class="icon">📭</div>
-              <p>No saved applications yet. <a href="/jobs/search">Search for jobs</a> to get started!</p>
-            </div>
-          `;
-        countEl.textContent = '0 applications';
-        return;
-      }
-
-      countEl.textContent = `${jobs.length} application${jobs.length !== 1 ? 's' : ''}`;
-      jobs.forEach(job => list.appendChild(buildCard(job)));
-
+      renderJobs(jobs);
     } catch (err) {
-      loading.innerHTML = `
-          <div class="icon">⚠️</div>
-          <p>Could not load jobs. Make sure the API is running.</p>
-        `;
+      renderState('⚠️', 'Could not load jobs. Make sure the API is running.');
     }
   }
 
-  // run on page load
+  async function createJob(payload) {
+    const res = await fetch('/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      throw new Error('Could not save job');
+    }
+    return res.json();
+  }
+
+  const searchBtn = document.getElementById('searchBtn');
+  const jobInput = document.getElementById('jobInput');
+  const locationInput = document.getElementById('locationInput');
+  const navSearch = document.getElementById('navSearch');
+
+  function triggerSearch() {
+    loadJobs(jobInput.value.trim(), locationInput.value.trim());
+  }
+
+  searchBtn.addEventListener('click', triggerSearch);
+  navSearch.addEventListener('click', (e) => { e.preventDefault(); triggerSearch(); });
+  jobInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); triggerSearch(); } });
+  locationInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); triggerSearch(); } });
+
+  document.getElementById('jobForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formMsg.style.color = 'var(--muted)';
+    formMsg.textContent = 'Saving...';
+    const payload = {
+      jobTitle: document.getElementById('formTitle').value.trim(),
+      company: document.getElementById('formCompany').value.trim(),
+      location: document.getElementById('formLocation').value.trim(),
+      status: document.getElementById('formStatus').value
+    };
+    try {
+      await createJob(payload);
+      formMsg.style.color = 'var(--green)';
+      formMsg.textContent = 'Saved!';
+      e.target.reset();
+      loadJobs();
+    } catch (err) {
+      formMsg.style.color = 'var(--red)';
+      formMsg.textContent = 'Could not save job. Check your inputs and try again.';
+    }
+  });
+
   loadJobs();
 </script>
 
