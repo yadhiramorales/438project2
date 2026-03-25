@@ -67,14 +67,36 @@
         return;
       }
       noteCount.textContent = `${list.length} note${list.length === 1 ? '' : 's'}`;
-      notesEl.innerHTML = list.map(n => `
-        <div class="note">
-          <strong>${n.jobTitle || 'Untitled role'}</strong>
-          <div class="muted">${n.company || 'Unknown company'}</div>
-          <div style="margin-top:0.35rem; white-space:pre-wrap;">${n.noteText || ''}</div>
-          <div class="muted" style="margin-top:0.35rem;">ID: ${n.id || n.jobId || ''}</div>
-        </div>
-      `).join('');
+      // Clear existing notes before rendering
+      notesEl.textContent = '';
+
+      list.forEach(n => {
+        const noteEl = document.createElement('div');
+        noteEl.className = 'note';
+
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = n.jobTitle || 'Untitled role';
+        noteEl.appendChild(titleEl);
+
+        const companyEl = document.createElement('div');
+        companyEl.className = 'muted';
+        companyEl.textContent = n.company || 'Unknown company';
+        noteEl.appendChild(companyEl);
+
+        const textEl = document.createElement('div');
+        textEl.style.marginTop = '0.35rem';
+        textEl.style.whiteSpace = 'pre-wrap';
+        textEl.textContent = n.noteText || '';
+        noteEl.appendChild(textEl);
+
+        const idEl = document.createElement('div');
+        idEl.className = 'muted';
+        idEl.style.marginTop = '0.35rem';
+        idEl.textContent = `ID: ${n.id || n.jobId || ''}`;
+        noteEl.appendChild(idEl);
+
+        notesEl.appendChild(noteEl);
+      });
     }
 
     async function loadNotes() {
