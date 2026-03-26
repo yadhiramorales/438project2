@@ -92,6 +92,36 @@ public class JobControllerTest {
                 .andExpect(jsonPath("$[0].status").value("OFFER")); // enum should serialize as string
     }
 
+    // GET /jobs/search — filters by keyword and location
+    @Test
+    void searchJobs_withKeywordAndLocation_shouldFilter() throws Exception {
+        JobApplication job = new JobApplication("Software Engineer", "Acme", "Remote", JobApplication.Status.APPLIED);
+
+        when(jobApplicationRepository.search("software", "remote")).thenReturn(List.of(job));
+
+        mockMvc.perform(get("/jobs/search")
+                        .param("q", "software")
+                        .param("location", "remote")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].jobTitle").value("Software Engineer"))
+                .andExpect(jsonPath("$[0].location").value("Remote"));
+    }
+
+    // GET /jobs/search — no params falls back to findAll
+    @Test
+    void searchJobs_withoutParams_returnsAll() throws Exception {
+        JobApplication job = new JobApplication("Backend Dev", "Meta", "NYC", JobApplication.Status.INTERVIEW);
+        when(jobApplicationRepository.findAll()).thenReturn(List.of(job));
+
+        mockMvc.perform(get("/jobs/search")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].company").value("Meta"));
+    }
+
     // POST /jobs — valid request should persist and return 201 with the created job
     @Test
     void createJob_withValidRequest_shouldReturn201() throws Exception {

@@ -4,9 +4,18 @@
     <meta charset="UTF-8" />
     <title>Auth Callback</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f3f2f1; }
+        .box { text-align: center; color: #555; }
+        .spinner { width: 32px; height: 32px; border: 3px solid #d4d2d0; border-top-color: #2557a7; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-<p>Signing you in...</p>
+<div class="box">
+    <div class="spinner"></div>
+    <p id="msg">Signing you in...</p>
+</div>
 
 <script>
     const SUPABASE_URL = "https://yoazzajeriqpcvolofyu.supabase.co";
@@ -15,25 +24,56 @@
     const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     (async () => {
-        const { data, error } = await sbClient.auth.getSession();
+        const msgEl = document.getElementById('msg');
 
-        if (error) {
-            document.body.innerHTML = "<p>Error: " + error.message + "</p>";
-            return;
+        try {
+            // Supabase puts the token in the URL hash after OAuth redirect
+            // This call processes the hash and establishes the session
+            const { data, error } = await sbClient.auth.getSession();
+
+            if (error) {
+                msgEl.textContent = "Auth error: " + error.message;
+                return;
+            }
+
+            let session = data?.session;
+
+            // If no session yet, wait for Supabase to process the hash fragment
+            if (!session) {
+                await new Promise(resolve => {
+                    const { data: listener } = sbClient.auth.onAuthStateChange((event, s) => {
+                        if (event === 'SIGNED_IN' && s) {
+                            session = s;
+                            listener.subscription.unsubscribe();
+                            resolve();
+                        }
+                    });
+                    // timeout after 5 seconds
+                    setTimeout(resolve, 5000);
+                });
+            }
+
+            const token = session?.access_token;
+
+            if (!token) {
+                msgEl.textContent = "No token found. Please try signing in again.";
+                setTimeout(() => window.location.href = "/login", 2000);
+                return;
+            }
+
+            // store token for API calls
+            localStorage.setItem("sb_access_token", token);
+            // store user email for display
+            const email = session?.user?.email;
+            if (email) localStorage.setItem("sb_user_email", email);
+
+            msgEl.textContent = "Login successful! Redirecting...";
+            setTimeout(() => window.location.href = "/", 500);
+
+        } catch (err) {
+            msgEl.textContent = "Something went wrong. Redirecting to login...";
+            setTimeout(() => window.location.href = "/login", 2000);
         }
-
-        const token = data?.session?.access_token;
-
-        if (!token) {
-            document.body.innerHTML = "<p>No token found. Try logging in again.</p>";
-            return;
-        }
-
-        localStorage.setItem("sb_access_token", token);
-
-        document.body.innerHTML = "<p>Login successful. Redirecting...</p>";
-
-        window.location.href = "/";
     })();
 </script>
 </body>

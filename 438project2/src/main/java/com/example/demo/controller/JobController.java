@@ -5,11 +5,9 @@ import com.example.demo.entity.JobApplication;
 import com.example.demo.repository.JobApplicationRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
@@ -20,12 +18,24 @@ public class JobController {
     @Autowired
     private JobApplicationRepository jobApplicationRepository;
 
-    @GetMapping("/jobs")
+    @GetMapping(value = "/jobs", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<JobApplication> getAllJobs() {
         return jobApplicationRepository.findAll();
     }
 
-    @PostMapping("/jobs")
+    @GetMapping(value = "/jobs/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<JobApplication> searchJobs(@RequestParam(required = false, name = "q") String keyword,
+                                           @RequestParam(required = false) String location) {
+        String kw = normalize(keyword);
+        String loc = normalize(location);
+        if (kw == null && loc == null) {
+            return jobApplicationRepository.findAll();
+        }
+        return jobApplicationRepository.search(kw, loc);
+    }
+
+
+    @PostMapping(value = "/jobs", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JobApplication> createJob(@Valid @RequestBody JobCreateRequest request) {
         JobApplication job = new JobApplication();
         job.setJobTitle(request.jobTitle());
@@ -37,5 +47,11 @@ public class JobController {
         JobApplication saved = jobApplicationRepository.save(job);
         URI location = saved.getId() != null ? URI.create("/jobs/" + saved.getId()) : URI.create("/jobs");
         return ResponseEntity.created(location).body(saved);
+    }
+
+    private String normalize(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

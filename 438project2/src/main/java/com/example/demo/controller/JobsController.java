@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Jobs")
 @RestController
-@RequestMapping("/jobs")
+@RequestMapping("/external-jobs")
 public class JobsController {
 
     @Operation(summary = "Search jobs using an external job API (placeholder for now)")
