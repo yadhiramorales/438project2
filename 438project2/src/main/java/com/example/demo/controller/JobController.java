@@ -34,6 +34,7 @@ public class JobController {
         return jobApplicationRepository.search(kw, loc);
     }
 
+
     @PostMapping(value = "/jobs", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JobApplication> createJob(@Valid @RequestBody JobCreateRequest request) {
         JobApplication job = new JobApplication();
