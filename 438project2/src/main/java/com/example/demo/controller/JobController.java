@@ -2,7 +2,6 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.JobCreateRequest;
 import com.example.demo.entity.JobApplication;
-import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.JobApplicationRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,9 +47,6 @@ public class JobController {
         URI location = saved.getId() != null ? URI.create("/jobs/" + saved.getId()) : URI.create("/jobs");
         return ResponseEntity.created(location).body(saved);
     }
-<<<<<<< HEAD
-}
-=======
 
     private String normalize(String value) {
         if (value == null) return null;
@@ -58,4 +54,3 @@ public class JobController {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
->>>>>>> f14fae8 (Wire landing search and job create to API)
