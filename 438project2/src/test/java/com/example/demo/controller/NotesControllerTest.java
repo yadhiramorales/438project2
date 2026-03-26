@@ -2,11 +2,17 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.NoteCreateRequest;
 import com.example.demo.dto.NoteUpdateRequest;
+import com.example.demo.entity.JobApplication;
+import com.example.demo.entity.JobNote;
+import com.example.demo.repository.JobApplicationRepository;
+import com.example.demo.repository.JobNoteRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.example.demo.config.TestSecurityConfig;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -16,19 +22,30 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.context.annotation.Import;
 
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 // Tests the NotesController endpoints without spinning up a full server
 @WebMvcTest(NotesController.class)
 @ContextConfiguration(classes = {NotesController.class, NotesControllerTest.TestSecurityConfig.class})
 @WithMockUser // pretend a logged-in user exists
 public class NotesControllerTest {
+
+    @MockBean
+    private JobNoteRepository jobNoteRepository;
+
+    @MockBean
+    private JobApplicationRepository jobApplicationRepository;
 
     // replaces the real SecurityConfig during tests — disables JWT so @WithMockUser works
     @Configuration
@@ -50,6 +67,44 @@ public class NotesControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @BeforeEach
+    void setUpMocks() {
+        when(jobApplicationRepository.findById(any(UUID.class))).thenAnswer(invocation -> {
+            UUID jobId = invocation.getArgument(0);
+            JobApplication job = new JobApplication("Software Engineer", "Google", "Remote", JobApplication.Status.APPLIED);
+            ReflectionTestUtils.setField(job, "id", jobId);
+            return Optional.of(job);
+        });
+
+        when(jobNoteRepository.findAllByOrderByCreatedAtDesc()).thenReturn(Collections.emptyList());
+
+        when(jobNoteRepository.findById(any(UUID.class))).thenAnswer(invocation -> {
+            UUID noteId = invocation.getArgument(0);
+            JobApplication job = new JobApplication("Software Engineer", "Google", "Remote", JobApplication.Status.APPLIED);
+            ReflectionTestUtils.setField(job, "id", UUID.randomUUID());
+
+            JobNote note = new JobNote(job, "Existing note text");
+            ReflectionTestUtils.setField(note, "id", noteId);
+            ReflectionTestUtils.setField(note, "createdAt", OffsetDateTime.now());
+            ReflectionTestUtils.setField(note, "updatedAt", OffsetDateTime.now());
+            return Optional.of(note);
+        });
+
+        when(jobNoteRepository.save(any(JobNote.class))).thenAnswer(invocation -> {
+            JobNote note = invocation.getArgument(0);
+            if (note.getId() == null) {
+                ReflectionTestUtils.setField(note, "id", UUID.randomUUID());
+            }
+            if (note.getCreatedAt() == null) {
+                ReflectionTestUtils.setField(note, "createdAt", OffsetDateTime.now());
+            }
+            ReflectionTestUtils.setField(note, "updatedAt", OffsetDateTime.now());
+            return note;
+        });
+
+        when(jobNoteRepository.existsById(any(UUID.class))).thenReturn(true);
+    }
+
 
     // GET /notes — should come back with 200 and an empty list
     @Test
@@ -64,8 +119,9 @@ public class NotesControllerTest {
     // POST /notes — valid request should return 200 with the note data echoed back
     @Test
     void createNote_withValidRequest_shouldReturn200() throws Exception {
+        String jobId = UUID.randomUUID().toString();
         NoteCreateRequest request = new NoteCreateRequest(
-                "job-123",
+                jobId,
                 "Software Engineer",
                 "Google",
                 "Great benefits, interesting work"
@@ -75,8 +131,8 @@ public class NotesControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                         .with(SecurityMockMvcRequestPostProcessors.csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.jobId").value("job-123"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.jobId").value(jobId))
                 .andExpect(jsonPath("$.jobTitle").value("Software Engineer"))
                 .andExpect(jsonPath("$.company").value("Google"))
                 .andExpect(jsonPath("$.noteText").value("Great benefits, interesting work"))
