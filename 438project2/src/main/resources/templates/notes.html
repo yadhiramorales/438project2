@@ -11,135 +11,228 @@
     main { max-width: 960px; margin: 0 auto; padding: 1.5rem; display: grid; gap: 1rem; }
     .card { background: #fff; border: 1px solid #d8dce6; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
     form { display: grid; gap: 0.5rem; }
-    input, textarea, button { padding: 0.65rem; border: 1px solid #ccd3e0; border-radius: 6px; font-size: 0.95rem; }
+    select, textarea, button { padding: 0.65rem; border: 1px solid #ccd3e0; border-radius: 6px; font-size: 0.95rem; font-family: Arial, sans-serif; }
     textarea { min-height: 120px; resize: vertical; }
     button { background: #1f4b99; color: #fff; border: none; cursor: pointer; font-weight: 600; }
     button:disabled { opacity: 0.7; cursor: not-allowed; }
     .list { display: flex; flex-direction: column; gap: 0.75rem; }
     .note { border: 1px solid #e3e7f0; border-radius: 6px; padding: 0.85rem; background: #fafbff; }
+    .note-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .note-actions { display: flex; gap: 0.5rem; }
+    .btn-edit { background: #e8f0fc; color: #1f4b99; border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .btn-delete { background: #fdecea; color: #b00020; border: none; padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .edit-form { display: none; margin-top: 0.5rem; }
+    .edit-form textarea { width: 100%; min-height: 80px; }
+    .edit-actions { display: flex; gap: 0.5rem; margin-top: 0.35rem; }
+    .btn-save { background: #1f4b99; color: #fff; border: none; padding: 0.4rem 0.85rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-cancel { background: #f0f0f0; color: #555; border: none; padding: 0.4rem 0.85rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
     .muted { color: #555; font-size: 0.9rem; }
     .state { text-align: center; color: #666; padding: 1rem; }
     .error { color: #b00020; font-size: 0.9rem; }
+    .spinner { width: 28px; height: 28px; border: 3px solid #d8dce6; border-top-color: #1f4b99; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 0.5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <header>
-    <div><a href="/">JobTracker</a></div>
-    <nav style="display:flex; gap:1rem; align-items:center; font-size:0.95rem;">
-      <a href="/jobs" aria-label="Jobs">Jobs</a>
-      <a href="/notes" aria-label="Notes">Notes</a>
-      <a href="/login" aria-label="Login">Login</a>
-    </nav>
-  </header>
+<header>
+  <div><a href="/">JobTracker</a></div>
+  <nav style="display:flex; gap:1rem; align-items:center; font-size:0.95rem;">
+    <a href="/jobs">Jobs</a>
+    <a href="/notes">Notes</a>
+    <a href="/login">Login</a>
+  </nav>
+</header>
 
-  <main>
-    <section class="card">
-      <h2 style="margin-top:0;">Create a note</h2>
-      <form id="noteForm">
-        <input id="jobId" name="jobId" placeholder="Job ID (UUID)" required />
-        <input id="jobTitle" name="jobTitle" placeholder="Job title" required />
-        <input id="company" name="company" placeholder="Company" required />
-        <textarea id="noteText" name="noteText" placeholder="Write your note" required></textarea>
-        <button type="submit" id="noteBtn">Save note</button>
-        <div id="noteMsg" class="muted"></div>
-      </form>
-    </section>
+<main>
+  <!-- create note form -->
+  <section class="card">
+    <h2 style="margin-top:0; margin-bottom:0.75rem;">Add a Note</h2>
+    <form id="noteForm">
+      <!-- dropdown populated from GET /jobs -->
+      <select id="jobSelect" required>
+        <option value="">Loading jobs...</option>
+      </select>
+      <textarea id="noteText" placeholder="Write your note here..." required></textarea>
+      <button type="submit" id="noteBtn">Save note</button>
+      <div id="noteMsg" class="muted"></div>
+    </form>
+  </section>
 
-    <section class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
-        <h2 style="margin:0;">Notes</h2>
-        <span id="noteCount" class="muted"></span>
-      </div>
-      <div id="noteError" class="error"></div>
-      <div id="notes" class="list"></div>
-    </section>
-  </main>
+  <!-- notes list -->
+  <section class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+      <h2 style="margin:0;">My Notes</h2>
+      <span id="noteCount" class="muted"></span>
+    </div>
+    <div id="noteError" class="error"></div>
+    <div id="notes" class="list">
+      <div class="state"><div class="spinner"></div></div>
+    </div>
+  </section>
+</main>
 
-  <script>
-    const notesEl = document.getElementById('notes');
-    const noteCount = document.getElementById('noteCount');
-    const noteError = document.getElementById('noteError');
+<script>
+  const notesEl = document.getElementById('notes');
+  const noteCount = document.getElementById('noteCount');
+  const noteError = document.getElementById('noteError');
+  let jobsCache = [];
 
-    function renderNoteList(list) {
-      if (!list || list.length === 0) {
-        noteCount.textContent = '';
-        notesEl.innerHTML = '<div class="state">No notes yet.</div>';
-        return;
-      }
-      noteCount.textContent = `${list.length} note${list.length === 1 ? '' : 's'}`;
-      // Clear existing notes before rendering
-      notesEl.textContent = '';
-
-      list.forEach(n => {
-        const noteEl = document.createElement('div');
-        noteEl.className = 'note';
-
-        const titleEl = document.createElement('strong');
-        titleEl.textContent = n.jobTitle || 'Untitled role';
-        noteEl.appendChild(titleEl);
-
-        const companyEl = document.createElement('div');
-        companyEl.className = 'muted';
-        companyEl.textContent = n.company || 'Unknown company';
-        noteEl.appendChild(companyEl);
-
-        const textEl = document.createElement('div');
-        textEl.style.marginTop = '0.35rem';
-        textEl.style.whiteSpace = 'pre-wrap';
-        textEl.textContent = n.noteText || '';
-        noteEl.appendChild(textEl);
-
-        const idEl = document.createElement('div');
-        idEl.className = 'muted';
-        idEl.style.marginTop = '0.35rem';
-        idEl.textContent = `ID: ${n.id || n.jobId || ''}`;
-        noteEl.appendChild(idEl);
-
-        notesEl.appendChild(noteEl);
+  // load jobs into dropdown
+  async function loadJobsDropdown() {
+    try {
+      const res = await fetch('/jobs', { headers: { 'Accept': 'application/json' } });
+      jobsCache = await res.json();
+      const select = document.getElementById('jobSelect');
+      select.innerHTML = '<option value="">Select a job application...</option>';
+      jobsCache.forEach(job => {
+        const opt = document.createElement('option');
+        opt.value = job.id;
+        opt.textContent = `${job.jobTitle} @ ${job.company}`;
+        select.appendChild(opt);
       });
+    } catch (err) {
+      document.getElementById('jobSelect').innerHTML = '<option value="">Could not load jobs</option>';
     }
+  }
 
-    async function loadNotes() {
-      noteError.textContent = '';
-      notesEl.innerHTML = '<div class="state">Loading...</div>';
-      try {
-        const res = await fetch('/notes');
-        if (!res.ok) throw new Error('Request failed');
-        const data = await res.json();
-        renderNoteList(data);
-      } catch (err) {
-        noteError.textContent = 'Could not load notes. Please try again.';
-        notesEl.innerHTML = '<div class="state">Error loading notes.</div>';
-      }
-    }
+  // format date
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    return `${Math.floor(days / 7)} week(s) ago`;
+  }
 
-    document.getElementById('noteForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('noteMsg');
-      msg.textContent = 'Saving...';
-      noteError.textContent = '';
-      try {
-        const payload = {
-          jobId: document.getElementById('jobId').value.trim(),
-          jobTitle: document.getElementById('jobTitle').value.trim(),
-          company: document.getElementById('company').value.trim(),
-          noteText: document.getElementById('noteText').value.trim()
-        };
-        const res = await fetch('/notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('Save failed');
-        msg.textContent = 'Saved!';
-        document.getElementById('noteForm').reset();
-        loadNotes();
-      } catch (err) {
-        msg.textContent = 'Could not save note.';
-      }
+  // toggle edit form
+  function toggleEdit(id) {
+    const form = document.getElementById(`edit-${id}`);
+    const text = document.getElementById(`text-${id}`);
+    const isOpen = form.style.display === 'block';
+    form.style.display = isOpen ? 'none' : 'block';
+    text.style.display = isOpen ? 'block' : 'none';
+  }
+
+  // PUT /notes/{id}
+  async function updateNote(id) {
+    const newText = document.getElementById(`editInput-${id}`).value.trim();
+    if (!newText) return;
+    const res = await fetch(`/notes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ noteText: newText })
     });
+    if (res.ok) {
+      document.getElementById(`text-${id}`).textContent = newText;
+      toggleEdit(id);
+    } else {
+      alert('Could not update note');
+    }
+  }
 
-    loadNotes();
-  </script>
+  // DELETE /notes/{id}
+  async function deleteNote(id) {
+    if (!confirm('Delete this note?')) return;
+    const res = await fetch(`/notes/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      document.getElementById(`note-${id}`).remove();
+      loadNotes();
+    } else {
+      alert('Could not delete note');
+    }
+  }
+
+  // render note list
+  function renderNoteList(list) {
+    notesEl.innerHTML = '';
+    if (!list || list.length === 0) {
+      noteCount.textContent = '';
+      notesEl.innerHTML = '<div class="state">No notes yet. Add one above!</div>';
+      return;
+    }
+    noteCount.textContent = `${list.length} note${list.length === 1 ? '' : 's'}`;
+    list.forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'note';
+      div.id = `note-${n.id}`;
+      div.innerHTML = `
+          <div class="note-header">
+            <div>
+              <strong>${n.jobTitle || 'Untitled role'}</strong>
+              <div class="muted">${n.company || ''}</div>
+            </div>
+            <div class="note-actions">
+              <button class="btn-edit" onclick="toggleEdit('${n.id}')">✏️ Edit</button>
+              <button class="btn-delete" onclick="deleteNote('${n.id}')">🗑 Delete</button>
+            </div>
+          </div>
+          <div id="text-${n.id}" style="margin-top:0.5rem; white-space:pre-wrap;">${n.noteText || ''}</div>
+          <div class="edit-form" id="edit-${n.id}">
+            <textarea id="editInput-${n.id}">${n.noteText || ''}</textarea>
+            <div class="edit-actions">
+              <button class="btn-save" onclick="updateNote('${n.id}')">Save</button>
+              <button class="btn-cancel" onclick="toggleEdit('${n.id}')">Cancel</button>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:0.5rem; font-size:0.78rem;">Added ${timeAgo(n.createdAt)}</div>
+        `;
+      notesEl.appendChild(div);
+    });
+  }
+
+  // GET /notes
+  async function loadNotes() {
+    noteError.textContent = '';
+    notesEl.innerHTML = '<div class="state"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch('/notes', { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Request failed');
+      renderNoteList(await res.json());
+    } catch (err) {
+      noteError.textContent = 'Could not load notes.';
+      notesEl.innerHTML = '<div class="state">Error loading notes.</div>';
+    }
+  }
+
+  // POST /notes
+  document.getElementById('noteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('noteMsg');
+    const jobId = document.getElementById('jobSelect').value;
+    const noteText = document.getElementById('noteText').value.trim();
+
+    if (!jobId) { msg.textContent = 'Please select a job'; return; }
+    if (!noteText) { msg.textContent = 'Please write a note'; return; }
+
+    msg.textContent = 'Saving...';
+
+    try {
+      const job = jobsCache.find(j => j.id === jobId);
+      const res = await fetch('/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          jobId: jobId,
+          jobTitle: job?.jobTitle || '',
+          company: job?.company || '',
+          noteText: noteText
+        })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      msg.textContent = '✓ Note saved!';
+      document.getElementById('noteText').value = '';
+      document.getElementById('jobSelect').value = '';
+      loadNotes();
+    } catch (err) {
+      msg.textContent = 'Could not save note.';
+    }
+  });
+
+  // init
+  loadJobsDropdown();
+  loadNotes();
+</script>
 </body>
 </html>
