@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JobTracker – Find the job that's right for you</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -316,7 +317,7 @@
   <div class="nav-right">
     <a class="nav-link" href="/jobs/search">Find Jobs</a>
     <a class="nav-link" href="/notes">My Notes</a>
-    <a class="nav-signin" href="/login">Sign in</a>
+    <a id="navAuthBtn" class="nav-signin" href="/login">Sign in</a>
   </div>
 </nav>
 
@@ -364,7 +365,7 @@
   <div class="sidebar">
     <div class="sidebar-card">
       <h3>Manage your job search</h3>
-      <a class="cta-primary" href="/login">Sign in with Google</a>
+      <a id="sidebarAuthBtn" class="cta-primary" href="/login">Sign in with Google</a>
       <a class="cta-secondary" href="/notes">View saved notes</a>
     </div>
     <div class="sidebar-card">
@@ -373,7 +374,7 @@
         <li><a href="/jobs/search">🔍 Search all jobs</a></li>
         <li><a href="/notes">📝 My notes</a></li>
         <li><a href="/jobs">📋 All applications</a></li>
-        <li><a href="/login">🔐 Sign in</a></li>
+        <li><a id="quickAuthLink" href="/login">🔐 Sign in</a></li>
       </ul>
     </div>
   </div>
@@ -384,20 +385,77 @@
   <div class="footer-links">
     <a href="/jobs/search">Find Jobs</a>
     <a href="/notes">My Notes</a>
-    <a href="/login">Sign In</a>
+    <a id="footerAuthLink" href="/login">Sign In</a>
+    <!-- signin button depends on login status-->
   </div>
   <p>© 2026 JobTracker · CST 438 Project 02 · Built with Spring Boot, Supabase & Docker</p>
 </footer>
 
 <script>
+  const SUPABASE_URL = "https://yoazzajeriqpcvolofyu.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_Pat5ZFK64TZGg1OW4HBphg_SZbIjDVn";
+  const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function updateAuthUI() {
+    const { data, error } = await sbClient.auth.getSession();
+    const session = data?.session;
+
+    const navBtn = document.getElementById("navAuthBtn");
+    const sidebarBtn = document.getElementById("sidebarAuthBtn");
+    const quickLink = document.getElementById("quickAuthLink");
+    const footerLink = document.getElementById("footerAuthLink");
+
+    if (session) {
+      if (navBtn) {
+        navBtn.textContent = "Signed in";
+        navBtn.removeAttribute("href");
+      }
+
+      if (sidebarBtn) {
+        sidebarBtn.textContent = "Continue your search";
+        sidebarBtn.setAttribute("href", "/jobs");
+      }
+
+      if (quickLink) {
+        quickLink.textContent = "👤 My notes";
+        quickLink.setAttribute("href", "/notes");
+      }
+
+      if (footerLink) {
+        footerLink.textContent = "My Notes";
+        footerLink.setAttribute("href", "/notes");
+      }
+    } else {
+      if (navBtn) {
+        navBtn.textContent = "Sign in";
+        navBtn.setAttribute("href", "/login");
+      }
+
+      if (sidebarBtn) {
+        sidebarBtn.textContent = "Sign in with Google";
+        sidebarBtn.setAttribute("href", "/login");
+      }
+
+      if (quickLink) {
+        quickLink.textContent = "🔐 Sign in";
+        quickLink.setAttribute("href", "/login");
+      }
+
+      if (footerLink) {
+        footerLink.textContent = "Sign In";
+        footerLink.setAttribute("href", "/login");
+      }
+    }
+  }
+
   // status badge helper — maps your Status enum to a styled tag
   function statusTag(status) {
     if (!status) return '';
     const map = {
       APPLIED:   { cls: 'status-applied',   label: '📋 Applied' },
-      INTERVIEW: { cls: 'status-interview',  label: '🗓 Interview' },
-      OFFER:     { cls: 'status-offer',      label: '🎉 Offer' },
-      REJECTED:  { cls: 'status-rejected',   label: '✗ Rejected' },
+      INTERVIEW: { cls: 'status-interview', label: '🗓 Interview' },
+      OFFER:     { cls: 'status-offer',     label: '🎉 Offer' },
+      REJECTED:  { cls: 'status-rejected',  label: '✗ Rejected' },
     };
     const s = map[status] || { cls: '', label: status };
     return `<span class="tag ${s.cls}">${s.label}</span>`;
@@ -410,7 +468,7 @@
     const days = Math.floor(diff / 86400000);
     if (days === 0) return 'Today';
     if (days === 1) return '1 day ago';
-    if (days < 7)  return `${days} days ago`;
+    if (days < 7) return `${days} days ago`;
     const weeks = Math.floor(days / 7);
     return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
   }
@@ -420,57 +478,69 @@
     const card = document.createElement('div');
     card.className = 'job-card';
     card.innerHTML = `
-        <div class="job-card-top">
-          <div>
-            <div class="job-title">${job.jobTitle || 'Untitled Position'}</div>
-            <div class="job-company">${job.company || 'Unknown Company'}</div>
-            <div class="job-location">📍 ${job.location || 'Location not specified'}</div>
-          </div>
-          <div class="job-logo">🏢</div>
+      <div class="job-card-top">
+        <div>
+          <div class="job-title">${job.jobTitle || 'Untitled Position'}</div>
+          <div class="job-company">${job.company || 'Unknown Company'}</div>
+          <div class="job-location">📍 ${job.location || 'Location not specified'}</div>
         </div>
-        <div class="job-tags">
-          ${statusTag(job.status)}
-        </div>
-        <div class="job-footer">
-          <span class="job-posted">${timeAgo(job.createdAt)}</span>
-        </div>
-      `;
+        <div class="job-logo">🏢</div>
+      </div>
+      <div class="job-tags">
+        ${statusTag(job.status)}
+      </div>
+      <div class="job-footer">
+        <span class="job-posted">${timeAgo(job.createdAt)}</span>
+      </div>
+    `;
     return card;
   }
 
   // fetch real data from GET /jobs
   async function loadJobs() {
-    const list     = document.getElementById('jobList');
-    const loading  = document.getElementById('loadingState');
-    const countEl  = document.getElementById('jobCount');
+    const list = document.getElementById('jobList');
+    const loading = document.getElementById('loadingState');
+    const countEl = document.getElementById('jobCount');
 
     try {
-      const token = localStorage.getItem('sb_access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const { data, error } = await sbClient.auth.getSession();
+      const token = data?.session?.access_token;
 
-      const res = await fetch('/jobs', { headers });
+      if (!token) {
+        loading.innerHTML = `
+          <div class="icon">🔐</div>
+          <p>Please <a href="/login">sign in</a> to see your saved applications.</p>
+        `;
+        return;
+      }
+
+      const res = await fetch('/jobs', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
       if (!res.ok) {
-        // not logged in or error
         loading.innerHTML = `
-            <div class="icon">🔐</div>
-            <p>Please <a href="/login">sign in</a> to see your saved applications.</p>
-          `;
+          <div class="icon">🔐</div>
+          <p>Please <a href="/login">sign in</a> to see your saved applications.</p>
+        `;
         return;
       }
 
       const jobs = await res.json();
 
-      // clear loading spinner
-      list.removeChild(loading);
+      if (loading && loading.parentNode === list) {
+        list.removeChild(loading);
+      }
 
       if (jobs.length === 0) {
         list.innerHTML = `
-            <div class="state-box">
-              <div class="icon">📭</div>
-              <p>No saved applications yet. <a href="/jobs/search">Search for jobs</a> to get started!</p>
-            </div>
-          `;
+          <div class="state-box">
+            <div class="icon">📭</div>
+            <p>No saved applications yet. <a href="/jobs/search">Search for jobs</a> to get started!</p>
+          </div>
+        `;
         countEl.textContent = '0 applications';
         return;
       }
@@ -480,14 +550,19 @@
 
     } catch (err) {
       loading.innerHTML = `
-          <div class="icon">⚠️</div>
-          <p>Could not load jobs. Make sure the API is running.</p>
-        `;
+        <div class="icon">⚠️</div>
+        <p>Could not load jobs. Make sure the API is running.</p>
+      `;
+      console.error(err);
     }
   }
 
-  // run on page load
-  loadJobs();
+  async function initLandingPage() {
+    await updateAuthUI();
+    await loadJobs();
+  }
+
+  initLandingPage();
 </script>
 
 </body>
