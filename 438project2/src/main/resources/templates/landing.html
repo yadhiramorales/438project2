@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JobTracker – Find the job that's right for you</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -197,7 +198,8 @@
   <div class="footer-links">
     <a href="/jobs">Find Jobs</a>
     <a href="/notes">My Notes</a>
-    <a href="/login">Sign In</a>
+    <a id="footerAuthLink" href="/login">Sign In</a>
+    <!-- signin button depends on login status-->
   </div>
   <p>© 2026 JobTracker · CST 438 Project 02 · Built with Spring Boot, Supabase & Docker</p>
 </footer>
